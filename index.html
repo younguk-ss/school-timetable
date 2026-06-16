@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>장흥관산중학교 주간 시간표</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root{
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --line2:#d1d5db;
+    --head:#f6d9bf; --sub:#fbeadd; --bg:#ffffff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; background:#0f172a; font-family:'Pretendard','Noto Sans KR',system-ui,sans-serif; color:var(--ink); overflow:hidden;}
+  #fit{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
+  #stage{
+    width:1920px; height:1080px; background:var(--bg);
+    transform-origin:center center; position:relative;
+    display:flex; flex-direction:column; padding:40px 44px 34px;
+  }
+  /* Header banner */
+  header{display:flex; align-items:center; gap:26px; padding-bottom:22px; border-bottom:3px solid #e7762b;}
+  .logo{width:104px; height:104px; flex:0 0 auto; border-radius:50%; object-fit:contain; background:#0b3d2e;}
+  .logo-fallback{width:104px;height:104px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:#0b3d2e;color:#ffe14d;font-weight:800;font-size:30px;letter-spacing:2px;border:3px solid #2e8b57;}
+  .titles{flex:1 1 auto;}
+  .school{font-size:24px; color:var(--muted); font-weight:600; letter-spacing:2px;}
+  .title{font-size:54px; font-weight:800; letter-spacing:-1px; line-height:1.1; margin-top:2px;}
+  .clock{text-align:right; flex:0 0 auto;}
+  .clock .date{font-size:24px; color:var(--muted); font-weight:600;}
+  .clock .time{font-size:46px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.05;}
+
+  /* Table */
+  .grid-wrap{flex:1 1 auto; padding-top:20px; min-height:0;}
+  table{width:100%; height:100%; border-collapse:separate; border-spacing:0; table-layout:fixed;}
+  th,td{border-right:1px solid var(--line); border-bottom:1px solid var(--line); text-align:center; vertical-align:middle; overflow:hidden;}
+  thead th{font-weight:800; background:var(--head); color:#5b3a1e;}
+  tr.day th{font-size:27px; height:54px; border-bottom:1px solid var(--line2);}
+  tr.sub th{font-size:20px; height:36px; background:var(--sub); color:#7a5536; font-weight:700;}
+  .corner{background:#fff !important; border-right:1px solid var(--line2)!important; width:138px;}
+  .daysep{border-left:2px solid var(--line2);}
+  td.period, th.period{width:138px; background:#fbfbfb; font-weight:800; color:#374151; border-right:1px solid var(--line2);}
+  td.period .pn{font-size:25px; line-height:1.1;}
+  td.period .pt{font-size:14px; color:var(--muted); font-weight:600; margin-top:3px;}
+  tbody td.subject{font-size:26px; font-weight:700; color:#222; line-height:1.15; padding:2px 4px;}
+  tbody td.subject small{display:block;font-size:15px;font-weight:600;color:#3a3a3a;opacity:.8;margin-top:1px;}
+  td.empty{background:#fafafa;}
+  td.swap{box-shadow:inset 4px 0 0 #2563eb;}            /* 자주(수업교체) 표시 */
+  td.activity{font-size:25px; font-weight:800; color:#3f3f46; letter-spacing:1px;}
+  th.today{background:#e7762b !important; color:#fff !important;}
+  th.today.sub{background:#f0915a !important; color:#fff !important;}
+  .updated{position:absolute; right:46px; bottom:12px; font-size:14px; color:#9ca3af;}
+  .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;margin-right:6px;vertical-align:middle;}
+</style>
+</head>
+<body>
+  <div id="fit"><div id="stage">
+    <header>
+      <img class="logo" id="logo" src="logo.png" alt="관산중 로고"
+           onerror="logoFail(this)" />
+      <div class="titles">
+        <div class="school">장흥관산중학교</div>
+        <div class="title" id="title">이번주 시간표</div>
+      </div>
+      <div class="clock">
+        <div class="date" id="cDate">—</div>
+        <div class="time" id="cTime">—</div>
+      </div>
+    </header>
+    <div class="grid-wrap"><table id="tt"><thead></thead><tbody></tbody></table></div>
+    <div class="updated"><span class="live-dot"></span><span id="upd">실시간 연동</span></div>
+  </div></div>
+
+<script>
+const SHEET_ID = '1G5XMHgQXd86CDg6PKhPML-Ra3z_JoCl0TbFx2y_0Bho';
+const REFRESH_MS = 30000;
+function logoFail(img){
+  // 실제 logo.png 가 없을 때 보여줄 배지(학교 엠블럼 근사 SVG)
+  const leaf='M50,49 C43,31 43,15 50,9 C57,15 57,31 50,49 Z';
+  const svg=`<svg class="logo" viewBox="0 0 100 100" role="img" aria-label="장흥관산중학교">
+    <circle cx="50" cy="50" r="49" fill="#0b3d2e"/>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="#2e8b57" stroke-width="5"/>
+    <g transform="translate(0,2)">
+      <path d="${leaf}" fill="#ffe14d" stroke="#c9a200" stroke-width="1"/>
+      <path d="${leaf}" fill="#ffe14d" stroke="#c9a200" stroke-width="1" transform="rotate(120 50 50)"/>
+      <path d="${leaf}" fill="#ffe14d" stroke="#c9a200" stroke-width="1" transform="rotate(240 50 50)"/>
+      <circle cx="50" cy="50" r="13" fill="#b5121b" stroke="#ffe14d" stroke-width="2"/>
+      <text x="50" y="55.5" text-anchor="middle" font-size="15" font-weight="800" fill="#fff" font-family="Pretendard,sans-serif">중</text>
+    </g>
+    <text x="50" y="86" text-anchor="middle" font-size="11" font-weight="800" fill="#ffd84d" font-family="Pretendard,sans-serif">1952</text>
+  </svg>`;
+  const tmp=document.createElement('div'); tmp.innerHTML=svg; img.replaceWith(tmp.firstElementChild);
+}
+
+/* ---- Subject -> color (현재 시트 색상에 맞춘 파스텔 팔레트) ---- */
+const C = {
+  kuk:'#ffffff', su:'#c9daf8', eng:'#ffe599', gwa:'#d9ead3', sahoe:'#fce5cd',
+  history:'#e2cff0', moral:'#cfe2f3', music:'#ead1dc', art:'#fdeaf1', pe:'#b6d7a8',
+  giga:'#f8c9b6', info:'#ededed', health:'#f9cb9c', jinro:'#f9d9e1', jayul:'#e3daf3',
+  dongari:'#cdebdd', after:'#ece8d1', etc:'#f1f1f1'
+};
+function colorFor(raw){
+  const t = (raw||'').replace(/\s+/g,'');
+  if(!t) return '';
+  if(/스포츠동아리|동아리/.test(t)) return C.dongari;
+  if(/방과후/.test(t)) return C.after;
+  if(/자율활동|창체/.test(t)) return C.jayul;
+  if(/진로활동|자유진로|진로탐색|진탐|진로와직업|진로/.test(t)) return C.jinro;
+  const s = t.replace('자주','');
+  if(/체육/.test(s)) return C.pe;
+  if(/수학/.test(s)) return C.su;
+  if(/국어/.test(s)) return C.kuk;
+  if(/영어/.test(s)) return C.eng;
+  if(/과학/.test(s)) return C.gwa;
+  if(/사회/.test(s)) return C.sahoe;
+  if(/역사/.test(s)) return C.history;
+  if(/도덕/.test(s)) return C.moral;
+  if(/음악/.test(s)) return C.music;
+  if(/미술/.test(s)) return C.art;
+  if(/기술가정|기가|가정/.test(s)) return C.giga;
+  if(/정보/.test(s)) return C.info;
+  if(/보건/.test(s)) return C.health;
+  return C.etc;
+}
+
+/* ---- CSV parser (handles quotes, commas, newlines) ---- */
+function parseCSV(text){
+  const rows=[]; let row=[]; let cur=''; let q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=ch;
+    } else {
+      if(ch==='"') q=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else if(ch==='\r'){ /* skip */ }
+      else cur+=ch;
+    }
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+
+/* ---- Fallback (현재 주차 데이터: 라이브 연결 전/실패 시 표시) ---- */
+const FALLBACK = [
+ ['2026.6.15.~6.19. 시간표'],
+ ['','월','','','화(학부모 공개수업)','','','수','','','목','','','금','',''],
+ ['','1','2','3','1','2','3','1','2','3','1','2','3','1','2','3'],
+ ['1교시\n(8:50~9:35)','수학','과학','영어','영어','기가','국어','자유진로\n(진로탐색)','역사','기가','체육','과학','국어','과학','진로와직업','수학'],
+ ['2교시\n(9:45~10:30)','영어','역사','과학','미술','수학','과학','진탐기가','정보','국어','음악','기가','수학','도덕','국어','사회'],
+ ['3교시\n(10:40~11:25)','국어','수학','체육','미술','역사','수학','국어','정보','과학','음악','영어','사회','도덕','국어','기가'],
+ ['4교시\n(11:35~12:20)','자주과학','체육','국어','체육','보건','사회','체육','수학','영어','자주국어','체육','사회','자주사회','영어','과학'],
+ ['5교시\n(13:20~14:05)','과학','영어','기가','국어','미술','영어','사회','체육','정보','자주과학','국어','음악','영어','도덕','체육'],
+ ['6교시\n(14:15~15:00)','사회','국어','수학','수학','미술','체육(스)','자주수학','과학','정보','보건','수학','음악','수학','도덕','영어'],
+ ['7교시\n(15:10~15:55)','스포츠동아리','','','방과후활동','','','진로활동','','','자율활동(창체)','','','','','']
+];
+
+/* ---- structure detection ---- */
+function cell(g,r,c){ return (g[r]&&g[r][c]!=null)?String(g[r][c]).trim():''; }
+function findStruct(g){
+  let dayRow=-1;
+  for(let i=0;i<Math.min(g.length,7);i++){
+    const v=(g[i]||[]).map(x=>(x||'').toString().trim());
+    if(v.includes('월')&&v.includes('금')){ dayRow=i; break; }
+  }
+  if(dayRow<0) dayRow=1;
+  const periodRows=[];
+  for(let i=0;i<g.length;i++){ if(cell(g,i,0).includes('교시')) periodRows.push(i); }
+  // title: first non-empty cell in rows above dayRow
+  let title='';
+  for(let i=0;i<=dayRow;i++){ for(const x of (g[i]||[])){ if((x||'').toString().trim()){ if(!cell(g,i,1)){ title=x.toString().trim(); break; } } } if(title) break; }
+  if(!title) title = cell(g,0,0);
+  return {dayRow, subRow:dayRow+1, periodRows, title};
+}
+
+/* ---- segment merge (empty cells merge left across the 15-col grid) ---- */
+function segments(g,r){
+  const segs=[];
+  for(let c=1;c<=15;c++){
+    const v=cell(g,r,c);
+    if(v){ segs.push({v, span:1, start:c}); }
+    else { if(segs.length){ segs[segs.length-1].span++; } else { segs.push({v:'', span:1, start:c, empty:true}); } }
+  }
+  return segs;
+}
+
+function todayIdx(){ const d=new Date().getDay(); return (d>=1&&d<=5)? d-1 : -1; }
+
+function render(g){
+  const st=findStruct(g);
+  document.getElementById('title').textContent = st.title || '이번주 시간표';
+
+  const thead=document.querySelector('#tt thead');
+  const tbody=document.querySelector('#tt tbody');
+  const tIdx=todayIdx();
+
+  // day header
+  let h1='<tr class="day"><th class="corner" rowspan="2">교시</th>';
+  for(let d=0; d<5; d++){
+    const base=1+d*3;
+    let label = cell(g,st.dayRow,base)||cell(g,st.dayRow,base+1)||cell(g,st.dayRow,base+2)||'';
+    const cls = (d===tIdx?'today':'') + (d>0?' daysep':'');
+    h1+=`<th colspan="3" class="${cls}">${esc(label)}</th>`;
+  }
+  h1+='</tr>';
+  // sub header (1/2/3)
+  let h2='<tr class="sub">';
+  for(let c=1;c<=15;c++){
+    const d=Math.floor((c-1)/3);
+    const v=cell(g,st.subRow,c)|| String((c-1)%3+1);
+    const cls=(d===tIdx?'today sub':'')+(((c-1)%3===0&&c>1)?' daysep':'');
+    h2+=`<th class="${cls}">${esc(v)}</th>`;
+  }
+  h2+='</tr>';
+  thead.innerHTML=h1+h2;
+
+  // body
+  let body='';
+  st.periodRows.forEach((r,pi)=>{
+    const lab=cell(g,r,0); const parts=lab.split('\n');
+    body+='<tr>';
+    body+=`<td class="period"><div class="pn">${esc(parts[0]||('교시'))}</div>${parts[1]?`<div class="pt">${esc(parts[1])}</div>`:''}</td>`;
+    const segs=segments(g,r);
+    segs.forEach(s=>{
+      if(s.empty){ body+=`<td class="empty" colspan="${s.span}"></td>`; return; }
+      const isActivity = s.span>=3;
+      const col=colorFor(s.v);
+      const swap=/^자주/.test(s.v.replace(/\s/g,''))?' swap':'';
+      const dsep = ((s.start-1)%3===0 && s.start>1) ? ' daysep':'';
+      const sub = s.v.split('\n');
+      const main = esc(sub[0]); const small = sub[1]?`<small>${esc(sub[1])}</small>`:'';
+      const cls = (isActivity?'activity':'subject')+swap+dsep;
+      const bg = col?`background:${col};`:'';
+      body+=`<td class="${cls}" colspan="${s.span}" style="${bg}">${main}${small}</td>`;
+    });
+    body+='</tr>';
+  });
+  tbody.innerHTML=body;
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+/* ---- clock ---- */
+const WD=['일','월','화','수','목','금','토'];
+function tick(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  document.getElementById('cDate').textContent=`${d.getFullYear()}. ${p(d.getMonth()+1)}. ${p(d.getDate())} (${WD[d.getDay()]})`;
+  document.getElementById('cTime').textContent=`${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ---- fit to screen (keep 1920x1080 ratio) ---- */
+function fit(){
+  const s=Math.min(window.innerWidth/1920, window.innerHeight/1080);
+  document.getElementById('stage').style.transform=`scale(${s})`;
+}
+
+/* ---- live fetch ---- */
+let lastCSV='';
+async function load(){
+  const urls=['/api/timetable',
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0`];
+  for(const u of urls){
+    try{
+      const r=await fetch(u,{cache:'no-store'});
+      if(!r.ok) continue;
+      const txt=await r.text();
+      if(!txt || txt.indexOf('FETCH_ERROR')===0) continue;
+      if(txt!==lastCSV){ lastCSV=txt; render(parseCSV(txt)); }
+      mark(true); return;
+    }catch(e){ /* try next */ }
+  }
+  mark(false);
+}
+function mark(ok){
+  const d=new Date(); const p=n=>String(n).padStart(2,'0');
+  document.getElementById('upd').textContent =
+    (ok?'실시간 연동 · 최근 갱신 ':'오프라인(미리보기) · ')+`${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+render(FALLBACK);     // 즉시 표시
+tick(); setInterval(tick,1000);
+fit(); window.addEventListener('resize',fit);
+load(); setInterval(load,REFRESH_MS);
+</script>
+</body>
+</html>

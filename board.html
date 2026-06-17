@@ -35,7 +35,7 @@
     var DEFAULT_PUBHTML = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQphQhxLlwvkeEpaMvJ6VFTZhfgLHv6N0IKv5iZrK3XOAnNXQ2isA7RSMEg5pSk5BmDGj-xdXpxNEu0/pubhtml';
     var DEFAULT_GID  = '59116586';   // 표시할 시트 탭
     var DEFAULT_BASE_W = 1100;       // 이 폭(px) 기준으로 화면 폭에 맞춰 확대 (작을수록 더 크게)
-    var DEFAULT_REFRESH = 120;       // 자동 새로고침(초). 0이면 끔
+    var DEFAULT_REFRESH = 60;        // 자동 새로고침(초). 0이면 끔
 
     // ===== URL 파라미터 파싱 =====
     // 사용 예:
@@ -70,7 +70,9 @@
     }
 
     var frame = document.getElementById('frame');
-    function reload() { frame.src = buildSrc(); }
+    // 새로고침마다 캐시버스터(cb)를 붙여, 브라우저가 게시본을 새로 받아오도록 함
+    // (구글이 재게시한 최신 내용을 빨리 반영하기 위함)
+    function reload() { frame.src = buildSrc() + '&cb=' + Date.now(); }
 
     // ===== 화면에 꽉 차게 확대 =====
     function applyFit() {

@@ -173,7 +173,7 @@
     // === 이 화면은 Vercel 프록시(/api/timetable)에서 색상·병합 포함 JSON을 받아 그립니다. ===
     // 기기는 Vercel(Let's Encrypt) 인증서만 신뢰하면 되고, 구글 접속은 Vercel 서버가 대신합니다.
 
-    var REFRESH_MS = 20000;        // 자동 새로고침 주기(밀리초)
+    var REFRESH_MS = 10000;        // 자동 새로고침 주기(밀리초) — 10초마다 시트 재조회
     var DATA_URL = '/api/timetable';
     var DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 

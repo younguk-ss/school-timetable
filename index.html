@@ -74,7 +74,8 @@
 
 <script>
 const SHEET_ID = '1G5XMHgQXd86CDg6PKhPML-Ra3z_JoCl0TbFx2y_0Bho';
-const REFRESH_MS = 30000;
+const GID = '59116586';            // 표시할 시트 탭(이번주 시간표)
+const REFRESH_MS = 10000;          // 10초마다 gviz로 시트를 거의 실시간으로 다시 읽음
 function logoFail(img){
   // 실제 logo.png 가 없을 때 보여줄 배지(학교 엠블럼 근사 SVG)
   const leaf='M50,49 C43,31 43,15 50,9 C57,15 57,31 50,49 Z';
@@ -260,8 +261,10 @@ function fit(){
 /* ---- live fetch ---- */
 let lastCSV='';
 async function load(){
-  const urls=['/api/timetable',
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0`];
+  // gviz 피드는 게시 캐시가 아니라 시트를 거의 실시간으로 읽음 → 10초 반영 가능
+  // _cb(타임스탬프)로 브라우저/엣지 캐시를 매번 우회
+  const urls=[
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}&headers=0&_cb=${Date.now()}`];
   for(const u of urls){
     try{
       const r=await fetch(u,{cache:'no-store'});

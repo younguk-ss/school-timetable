@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
+    :root {
+      --ink: #1f2733;
+      --muted: #8a94a6;
+      --line: #e6e9ef;
+      --line-strong: #2b3442;   /* 요일 구분 굵은 선 */
+      --bg: #eef1f5;
+      --card: #ffffff;
+      --accent: #2f6df0;
+      --today: #fff8e6;
+      --today-bar: #f0a72f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    /* 1920x1080 고정 스테이지를 화면 비율에 맞춰 스케일 */
+    #viewport {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+    #stage {
+      width: 1920px; height: 1080px;
+      background: var(--bg);
+      transform-origin: center center;
+      display: flex; flex-direction: column;
+      padding: 40px 48px 32px;
+    }
+
+    /* ===== 헤더 ===== */
+    header {
+      display: flex; align-items: center; gap: 26px;
+      padding-bottom: 22px;
+      border-bottom: 3px solid var(--line-strong);
+      margin-bottom: 22px;
+    }
+    #logo {
+      width: 104px; height: 104px; flex: 0 0 104px;
+      border-radius: 50%;
+      object-fit: contain;
+      background: transparent;
+    }
+    #logoFallback {
+      width: 104px; height: 104px; flex: 0 0 104px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 42%, #fff7c2 0 38%, #f4e04d 39% 60%, #2f8f3e 61% 100%);
+      display: flex; align-items: center; justify-content: center;
+      color: #7a1320; font-weight: 800; font-size: 38px;
+      border: 4px solid #2f8f3e;
+      box-shadow: inset 0 0 0 3px #fff;
+    }
+    .head-text { display: flex; flex-direction: column; gap: 6px; }
+    .head-text .school { font-size: 30px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+    .head-text .main {
+      font-size: 50px; font-weight: 800; letter-spacing: -.5px;
+      display: flex; align-items: baseline; gap: 18px;
+    }
+    .head-text .main .date { font-size: 32px; font-weight: 700; color: var(--accent); }
+    .head-right { margin-left: auto; text-align: right; display: flex; flex-direction: column; gap: 8px; }
+    #clock { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    #updated { font-size: 18px; color: var(--muted); }
+
+    /* ===== 시간표 ===== */
+    .grid-wrap { flex: 1 1 auto; min-height: 0; display: flex; }
+    table {
+      width: 100%; height: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: var(--card);
+      border: 2px solid var(--line-strong);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    col.col-period { width: 132px; }
+
+    th, td {
+      border: 1px solid var(--line);
+      text-align: center; vertical-align: middle;
+      font-size: 25px;
+      padding: 4px 6px;
+      overflow: hidden;
+    }
+
+    thead th { background: #f7f9fc; }
+    th.corner { background: #eef2f8; font-size: 22px; font-weight: 700; color: var(--muted); }
+    th.day-head { font-size: 30px; font-weight: 800; padding: 12px 6px; }
+    th.grade-head { font-size: 20px; font-weight: 700; color: #5b6477; padding: 8px 4px; }
+
+    /* 요일 구분 굵은 선 */
+    .day-start { border-left: 4px solid var(--line-strong) !important; }
+
+    td.period {
+      background: #f7f9fc;
+      font-weight: 800; font-size: 22px;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+    td.period .time { display: block; font-size: 16px; font-weight: 600; color: var(--muted); margin-top: 3px; }
+
+    td.cell { font-weight: 600; line-height: 1.1; }
+    td.empty { background: #fcfdff; }
+
+    /* 오늘 요일 강조 */
+    th.today { background: var(--today) !important; box-shadow: inset 0 4px 0 var(--today-bar); }
+    td.today { background: var(--today); }
+    td.today.has-color { box-shadow: inset 0 0 0 9999px rgba(240,167,47,0.10); }
+
+    /* ===== 참고사항 ===== */
+    footer {
+      margin-top: 18px;
+      display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+      padding: 14px 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 56px;
+    }
+    footer .label { font-size: 20px; font-weight: 800; color: var(--ink); margin-right: 4px; }
+    footer .note { font-size: 19px; font-weight: 600; color: #44506a; }
+    footer .note.blue { color: #2f6df0; }
+    footer .note.red { color: #e23b3b; }
+    footer .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); display: inline-block; }
+
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--muted); background: var(--bg); z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">시간표를 불러오는 중…</div>
+
+  <div id="viewport">
+    <div id="stage">
+      <header>
+        <img id="logo" alt="로고" style="display:none">
+        <div id="logoFallback">관산<br>中</div>
+        <div class="head-text">
+          <div class="school" id="schoolName">장흥관산중학교</div>
+          <div class="main">
+            <span>이번주 시간표</span>
+            <span class="date" id="dateRange"></span>
+          </div>
+        </div>
+        <div class="head-right">
+          <div id="clock">--:--:--</div>
+          <div id="updated"></div>
+        </div>
+      </header>
+
+      <div class="grid-wrap">
+        <table id="tt">
+          <colgroup id="cols"></colgroup>
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <footer id="footer"></footer>
+    </div>
+  </div>
+
+  <script>
+    var REFRESH_MS = 20000;
+    var DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+    // 로고를 코드에 직접 박아 넣을 자리 (data:image/...;base64,.... 형식)
+    // 값이 있으면 드라이브 설정 없이 이 로고를 최우선으로 사용합니다.
+    // (필요 시 학교 로고 base64 data URI를 여기에 붙여넣으세요. 비워두면 텍스트 엠블럼 표시)
+    var LOGO_DATA_URI = '';
+
+    // ---------- 유틸 ----------
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function isWhite(hex) {
+      if (!hex) return true;
+      var h = hex.toLowerCase();
+      return h === '#ffffff' || h === '#fff' || h === 'white';
+    }
+    function todayName() {
+      return DAY_NAMES[new Date().getDay()];
+    }
+
+    // ---------- 스테이지 스케일 ----------
+    function fitStage() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      document.getElementById('stage').style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fitStage);
+
+    // ---------- 시계 ----------
+    function tickClock() {
+      var d = new Date();
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      document.getElementById('clock').textContent =
+        DAY_NAMES[d.getDay()] + '요일  ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+    setInterval(tickClock, 1000); tickClock();
+
+    // ---------- 병합 맵 ----------
+    function buildMergeMaps(merges) {
+      var cover = {}, anchor = {};
+      (merges || []).forEach(function (m) {
+        anchor[m.r + '_' + m.c] = { rs: m.rs, cs: m.cs };
+        for (var dr = 0; dr < m.rs; dr++) {
+          for (var dc = 0; dc < m.cs; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            cover[(m.r + dr) + '_' + (m.c + dc)] = true;
+          }
+        }
+      });
+      return { cover: cover, anchor: anchor };
+    }
+
+    // ---------- 날짜 추출 ----------
+    function extractDate(title) {
+      var m = title && title.match(/\(([^)]*\d[^)]*)\)/);
+      if (m) return m[1].trim();
+      var m2 = title && title.match(/(\d{4}[.\s]*\d{1,2}[.\s]*\d{1,2}\.?\s*~\s*\d{1,4}[.\s]*\d{0,2}[.\s]*\d{0,2}\.?)/);
+      return m2 ? m2[1].trim() : '';
+    }
+
+    // ---------- 로딩/에러 표시 ----------
+    function showMessage(msg) {
+      var el = document.getElementById('loading');
+      el.innerHTML = msg;
+      el.style.display = 'flex';
+    }
+
+    // ---------- 렌더 ----------
+    function render(model) {
+      if (!model) { showMessage('데이터를 받지 못했습니다. 자동으로 다시 시도합니다.'); return; }
+      if (model.error) {
+        showMessage('<div style="text-align:center;line-height:1.6">'
+          + '<div style="font-size:30px;color:#e23b3b;font-weight:800">시간표를 불러오지 못했습니다</div>'
+          + '<div style="font-size:20px;margin-top:14px;color:#5b6477">원인: ' + esc(model.error) + '</div>'
+          + '<div style="font-size:16px;margin-top:10px;color:#8a94a6">시트 접근 권한 또는 형식을 확인하세요. (자동으로 다시 시도합니다)</div>'
+          + '</div>');
+        return;
+      }
+      if (!model.dayGroups || !model.dayGroups.length) {
+        showMessage('시간표 데이터를 찾지 못했습니다. 시트에 요일(월~금) 행과 교시 항목이 있는지 확인하세요.'
+          + (model.sheetName ? '<br><span style="font-size:16px;color:#8a94a6">읽은 시트: ' + esc(model.sheetName) + '</span>' : ''));
+        return;
+      }
+      document.getElementById('loading').style.display = 'none';
+
+      document.getElementById('schoolName').textContent = model.schoolName || '장흥관산중학교';
+      document.getElementById('dateRange').textContent = extractDate(model.title || '');
+
+      var groups = model.dayGroups;
+      var maps = buildMergeMaps(model.merges);
+      var today = todayName();
+
+      // colgroup
+      var colsHtml = '<col class="col-period">';
+      groups.forEach(function (g) {
+        for (var i = 0; i < g.span; i++) colsHtml += '<col>';
+      });
+      document.getElementById('cols').innerHTML = colsHtml;
+
+      // 요일 시작열 집합(굵은 선)
+      var dayStartCols = {};
+      groups.forEach(function (g) { dayStartCols[g.start] = true; });
+
+      // ===== thead =====
+      var h1 = '<tr><th class="corner" rowspan="2">교시</th>';
+      groups.forEach(function (g) {
+        var cls = 'day-head' + (today === g.name ? ' today' : '') + ' day-start';
+        h1 += '<th class="' + cls + '" colspan="' + g.span + '">' + esc(g.name) + '</th>';
+      });
+      h1 += '</tr>';
+
+      var h2 = '<tr>';
+      groups.forEach(function (g) {
+        for (var i = 0; i < g.span; i++) {
+          var label = g.grades[i] || '';
+          if (/^\d+$/.test(label)) label = label + '학년';
+          var cls = 'grade-head' + (today === g.name ? ' today' : '') + (i === 0 ? ' day-start' : '');
+          h2 += '<th class="' + cls + '">' + esc(label) + '</th>';
+        }
+      });
+      h2 += '</tr>';
+      document.getElementById('thead').innerHTML = h1 + h2;
+
+      // ===== tbody =====
+      var V = model.values, BG = model.bg, FC = model.fontColor, FW = model.fontWeight, FS = model.fontStyle;
+      var notesStart = model.notesStartCol;
+      var bodyRows = model.bodyRows;
+      var lastBodyRow = bodyRows.length ? bodyRows[bodyRows.length - 1] : 0;
+
+      var rowsHtml = '';
+      bodyRows.forEach(function (r) {
+        rowsHtml += '<tr>';
+
+        // 교시 라벨 (A열)
+        var raw = (V[r][0] || '').trim();
+        var parts = raw.split('\n');
+        var pName = parts[0] || '';
+        var pTime = parts.slice(1).join(' ');
+        rowsHtml += '<td class="period">' + esc(pName) +
+          (pTime ? '<span class="time">' + esc(pTime) + '</span>' : '') + '</td>';
+
+        // 요일/학년 셀
+        for (var c = 1; c < notesStart; c++) {
+          var key = r + '_' + c;
+          if (maps.cover[key]) continue; // 병합에 가려진 셀
+
+          var a = maps.anchor[key];
+          var rs = 1, cs = 1;
+          if (a) {
+            rs = Math.min(a.rs, lastBodyRow - r + 1);
+            cs = Math.min(a.cs, notesStart - c);
+          }
+
+          var val = (V[r][c] || '').trim();
+          var color = FC[r][c];
+          var weight = (FW[r][c] === 'bold') ? '800' : '600';
+          var italic = (FS && FS[r][c] === 'italic') ? 'font-style:italic;' : '';
+          var bgc = BG[r][c];
+
+          var style = '';
+          var hasColor = false;
+          if (!isWhite(bgc)) { style += 'background:' + bgc + ';'; hasColor = true; }
+          if (color && color.toLowerCase() !== '#000000') style += 'color:' + color + ';';
+          style += 'font-weight:' + weight + ';' + italic;
+
+          var cls = (val ? 'cell' : 'cell empty');
+          if (dayStartCols[c]) cls += ' day-start';
+          if (today === dayOfCol(groups, c)) cls += ' today' + (hasColor ? ' has-color' : '');
+
+          rowsHtml += '<td class="' + cls + '" style="' + style + '"' +
+            (rs > 1 ? ' rowspan="' + rs + '"' : '') +
+            (cs > 1 ? ' colspan="' + cs + '"' : '') + '>' +
+            esc(val).replace(/\n/g, '<br>') + '</td>';
+        }
+        rowsHtml += '</tr>';
+      });
+      document.getElementById('tbody').innerHTML = rowsHtml;
+
+      // ===== 참고사항 =====
+      renderNotes(model.notes || []);
+
+      // 업데이트 시각
+      var n = new Date();
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      document.getElementById('updated').textContent =
+        '업데이트 ' + p(n.getHours()) + ':' + p(n.getMinutes()) + ':' + p(n.getSeconds());
+
+      fitStage();
+    }
+
+    function dayOfCol(groups, c) {
+      for (var i = 0; i < groups.length; i++) {
+        var g = groups[i];
+        if (c >= g.start && c < g.start + g.span) return g.name;
+      }
+      return '';
+    }
+
+    function renderNotes(notes) {
+      var footer = document.getElementById('footer');
+      if (!notes.length) { footer.innerHTML = '<span class="note">참고사항 없음</span>'; return; }
+      var html = '<span class="label">참고사항</span>';
+      notes.forEach(function (t, i) {
+        if (/참고사항|비고사항/.test(t)) return; // 헤더성 텍스트 제외
+        var cls = 'note';
+        if (t.indexOf('파란') !== -1) cls += ' blue';
+        else if (t.indexOf('빨간') !== -1) cls += ' red';
+        if (i > 0) html += '<span class="dot"></span>';
+        html += '<span class="' + cls + '">' + esc(t) + '</span>';
+      });
+      footer.innerHTML = html;
+    }
+
+    // ---------- 로고 ----------
+    function setLogo(dataUri) {
+      if (dataUri) {
+        var img = document.getElementById('logo');
+        img.src = dataUri;
+        img.style.display = 'block';
+        document.getElementById('logoFallback').style.display = 'none';
+      }
+    }
+
+    // ---------- 데이터 로딩 ----------
+    function refresh() {
+      google.script.run
+        .withSuccessHandler(function (m) { render(m); })
+        .withFailureHandler(function (e) {
+          console.error(e);
+          render({ error: (e && e.message) ? e.message : String(e) });
+        })
+        .getTimetable();
+    }
+
+    function boot() {
+      // 코드에 박아 넣은 로고가 있으면 최우선 사용
+      if (LOGO_DATA_URI) setLogo(LOGO_DATA_URI);
+
+      // 설정 반영 + 폴링 시작
+      google.script.run.withSuccessHandler(function (cfg) {
+        if (cfg && cfg.refreshSeconds) REFRESH_MS = cfg.refreshSeconds * 1000;
+        setInterval(refresh, REFRESH_MS);
+      }).getConfig();
+
+      // 박아 넣은 로고가 없으면 드라이브(LOGO_FILE_ID)에서 시도
+      if (!LOGO_DATA_URI) {
+        google.script.run.withSuccessHandler(setLogo).getLogoDataUri();
+      }
+
+      // 시간표 첫 로드
+      refresh();
+      fitStage();
+    }
+
+    window.addEventListener('load', boot);
+  </script>
+</body>
+</html>

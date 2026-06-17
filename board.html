@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>이번주 시간표 (게시본 확대)</title>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #ffffff; overflow: hidden; }
+    /* iframe을 논리 크기로 두고 transform:scale 로 화면에 꽉 차게 확대 */
+    #frame {
+      border: 0;
+      display: block;
+      transform-origin: top left;
+      background: #ffffff;
+    }
+    /* 확대 배율 안내 오버레이 (키보드로 조절 시 잠깐 표시) */
+    #hud {
+      position: fixed; left: 12px; bottom: 12px;
+      font: 600 14px/1.4 'Malgun Gothic', sans-serif;
+      color: #fff; background: rgba(0,0,0,.62);
+      padding: 8px 12px; border-radius: 8px;
+      opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 5;
+      white-space: pre;
+    }
+    #hud.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <iframe id="frame" scrolling="no" frameborder="0"></iframe>
+  <div id="hud"></div>
+
+  <script>
+    // ===== 설정 (URL 파라미터로 덮어쓸 수 있음) =====
+    // 기본 게시(pubhtml) 주소 — 장흥관산중학교 "2026. 1학기 시간표"
+    var DEFAULT_PUBHTML = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQphQhxLlwvkeEpaMvJ6VFTZhfgLHv6N0IKv5iZrK3XOAnNXQ2isA7RSMEg5pSk5BmDGj-xdXpxNEu0/pubhtml';
+    var DEFAULT_GID  = '59116586';   // 표시할 시트 탭
+    var DEFAULT_BASE_W = 1100;       // 이 폭(px) 기준으로 화면 폭에 맞춰 확대 (작을수록 더 크게)
+    var DEFAULT_REFRESH = 120;       // 자동 새로고침(초). 0이면 끔
+
+    // ===== URL 파라미터 파싱 =====
+    // 사용 예:
+    //   board.html                      → 기본값으로 폭에 꽉 차게 확대
+    //   board.html?w=900                → 더 크게 (기준 폭을 줄임)
+    //   board.html?w=1300               → 더 작게
+    //   board.html?zoom=1.8             → 배율 직접 고정
+    //   board.html?gid=12345            → 다른 시트 탭
+    //   board.html?url=<다른 pubhtml>   → 다른 게시 주소
+    //   board.html?refresh=60           → 60초마다 새로고침
+    var qs = {};
+    location.search.replace(/^\?/, '').split('&').forEach(function (kv) {
+      if (!kv) return;
+      var i = kv.indexOf('=');
+      var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i));
+      var v = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1));
+      qs[k] = v;
+    });
+
+    var baseW   = qs.w ? parseFloat(qs.w) : DEFAULT_BASE_W;
+    var refresh = qs.refresh != null ? parseInt(qs.refresh, 10) : DEFAULT_REFRESH;
+    var fixedZoom = qs.zoom ? parseFloat(qs.zoom) : null;  // null이면 폭 자동맞춤
+    var manualZoom = null; // 키보드로 조절한 값
+
+    // ===== 게시 주소 만들기 (한 시트만, 군더더기 최소화) =====
+    function buildSrc() {
+      var base = qs.url || DEFAULT_PUBHTML;
+      base = base.split('#')[0].split('?')[0];       // 기존 쿼리/해시 제거
+      var gid = qs.gid || DEFAULT_GID;
+      return base + '?gid=' + encodeURIComponent(gid) +
+             '&single=true&widget=true&headers=false&chrome=false&rm=minimal';
+    }
+
+    var frame = document.getElementById('frame');
+    function reload() { frame.src = buildSrc(); }
+
+    // ===== 화면에 꽉 차게 확대 =====
+    function applyFit() {
+      var scale = manualZoom || fixedZoom || (window.innerWidth / baseW);
+      frame.style.transform = 'scale(' + scale + ')';
+      frame.style.width  = (window.innerWidth  / scale) + 'px';
+      frame.style.height = (window.innerHeight / scale) + 'px';
+      return scale;
+    }
+
+    // ===== 배율 안내 오버레이 =====
+    var hud = document.getElementById('hud');
+    var hudTimer = null;
+    function showHud(scale) {
+      hud.textContent =
+        '확대 배율 ' + scale.toFixed(2) + 'x\n' +
+        '+ / - : 조절   |   이 배율 고정 URL → ?zoom=' + scale.toFixed(2);
+      hud.classList.add('show');
+      if (hudTimer) clearTimeout(hudTimer);
+      hudTimer = setTimeout(function () { hud.classList.remove('show'); }, 2600);
+    }
+
+    // ===== 키보드로 확대 미세조정 (실제 화면에서 맞춰보고 URL에 박아넣기) =====
+    window.addEventListener('keydown', function (e) {
+      var cur = manualZoom || fixedZoom || (window.innerWidth / baseW);
+      if (e.key === '+' || e.key === '=' || e.key === 'ArrowUp')   { manualZoom = Math.min(6, cur + 0.05); }
+      else if (e.key === '-' || e.key === '_' || e.key === 'ArrowDown') { manualZoom = Math.max(0.3, cur - 0.05); }
+      else if (e.key === '0') { manualZoom = null; } // 자동맞춤으로 복귀
+      else return;
+      showHud(applyFit());
+    });
+
+    // ===== 시작 =====
+    window.addEventListener('resize', applyFit);
+    reload();
+    applyFit();
+    if (refresh > 0) setInterval(reload, refresh * 1000);
+  </script>
+</body>
+</html>

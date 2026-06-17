@@ -35,6 +35,13 @@ var merges = sheet.getMergedRanges().map(...)
 var merges = rng.getMergedRanges().map(...)
 ```
 
+## JSON 출력 (Vercel 프록시 연동용)
+
+`doGet(e)`는 `?format=json` 파라미터가 오면 HTML 대신 시간표 **JSON**을 반환합니다.
+DIDMATE 기기의 인증서 오류(`SEC_ERROR_UNKNOWN_ISSUER`)를 우회하기 위해,
+Vercel 서버리스 프록시(`/api/timetable`)가 서버측에서 이 JSON을 받아 기기에 전달합니다.
+자세한 설정은 저장소 루트의 `VERCEL-색상연동-안내.md` 참고.
+
 ## 배포 방법
 
 1. https://script.google.com 에서 새 프로젝트 생성 (또는 기존 프로젝트 열기)

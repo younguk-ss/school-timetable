@@ -30,8 +30,19 @@ var CONFIG = {
   REFRESH_SECONDS: 20
 };
 
-/** 웹앱 진입점 */
-function doGet() {
+/**
+ * 웹앱 진입점
+ * - 기본: HTML 화면(google.script.run 버전)
+ * - ?format=json: 시간표 데이터를 JSON으로 반환
+ *   → Vercel 서버리스 프록시(/api/timetable)가 서버측에서 이 JSON을 받아가
+ *     DIDMATE 기기가 구글 인증서를 신뢰할 필요 없이 색상·병합까지 그대로 표시하게 함.
+ */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.format === 'json') {
+    return ContentService
+      .createTextOutput(JSON.stringify(getTimetable()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle(CONFIG.SCHOOL_NAME + ' 이번주 시간표')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
